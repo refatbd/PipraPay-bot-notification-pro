@@ -53,9 +53,40 @@ if (isset($_GET['telegram-bot-notification-pro'])) {
     $bot_token = $settings['bot_token'];
     $reply = '';
 
+    // Function to check if a chat ID is authorized
+    function is_chat_id_authorized($chat_id, $settings) {
+        if (empty($settings['chat_ids_json'])) {
+            return false;
+        }
+        $chat_ids = json_decode($settings['chat_ids_json'], true);
+        if (empty($chat_ids) || !is_array($chat_ids)) {
+            return false;
+        }
+        foreach ($chat_ids as $chat) {
+            if (($chat['enabled'] ?? 'false') === 'true' && $chat['id'] == $chat_id) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    $is_authorized = is_chat_id_authorized($chat_id, $settings);
+    $restricted_commands = [
+        '/last_transaction',
+        '/sales_today',
+        '/sales_yesterday',
+        '/sales_this_month',
+        '/pending_transactions',
+        '/failed_transactions',
+        '/completed_transactions',
+        '/help',
+    ];
+
     if ($message_text === "/start") {
-        $reply = "Here's your Chat ID: `{$chat_id}`\n\nCopy this and paste it into the Chat ID section in your PipraPay settings.";
-    } else {
+        $reply = "👋 Here's your Chat ID: `{$chat_id}`\n\nCopy this and paste it into the Chat ID section in your PipraPay settings.";
+    } elseif (in_array($message_text, $restricted_commands) && !$is_authorized) {
+        $reply = "🚫 Chat id is not authorized. Add chat id to your admin panel first";
+    } elseif ($is_authorized) {
         global $conn, $db_host, $db_user, $db_pass, $db_name, $db_prefix;
 
         if (!isset($conn)) {
@@ -133,7 +164,7 @@ if (isset($_GET['telegram-bot-notification-pro'])) {
                     break;
 
                 case '/help':
-                    $reply = "*Available Commands:*\n\n" .
+                    $reply = "🤖 *Available Commands:*\n\n" .
                              "`/start` - Get your Chat ID.\n" .
                              "`/last_transaction` - Details of the most recent transaction.\n" .
                              "`/sales_today` - Total sales for today.\n" .
@@ -146,7 +177,7 @@ if (isset($_GET['telegram-bot-notification-pro'])) {
                     break;
 
                 default:
-                    $reply = "Invalid command. To get your chat ID, type `/start` or type `/help` to see all available commands.";
+                    $reply = "🤔 Invalid command. To get your chat ID, type `/start` or type `/help` to see all available commands.";
                     break;
             }
         } catch (Exception $e) {
@@ -157,10 +188,14 @@ if (isset($_GET['telegram-bot-notification-pro'])) {
                 $conn->close();
             }
         }
+    } else {
+        $reply = "🤔 Invalid command. To get your chat ID, type `/start`.";
     }
     
-    $params = ['chat_id' => $chat_id, 'text' => $reply, 'parse_mode' => 'Markdown'];
-    $url = "https://api.telegram.org/bot{$bot_token}/sendMessage?" . http_build_query($params);
-    @file_get_contents($url);
+    if(!empty($reply)) {
+        $params = ['chat_id' => $chat_id, 'text' => $reply, 'parse_mode' => 'Markdown'];
+        $url = "https://api.telegram.org/bot{$bot_token}/sendMessage?" . http_build_query($params);
+        @file_get_contents($url);
+    }
 }
 ?>
