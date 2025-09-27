@@ -6,7 +6,7 @@
 $plugin_meta = [
     'Plugin Name'       => 'Telegram Bot Notification Pro',
     'Description'       => 'An enhanced Telegram Bot Notification plugin for PipraPay with support for multiple chat IDs and advanced notification controls.',
-    'Version'           => '2.0.0',
+    'Version'           => '2.1.1',
     'Author'            => 'Refat Rahman',
     'Author URI'        => 'https://github.com/refatbd',
     'License'           => 'GPL-2.0+',

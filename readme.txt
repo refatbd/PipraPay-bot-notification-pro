@@ -4,18 +4,19 @@ Donate link: https://refat.ovh/donate
 Tags: notification, bot notification, admin notification, telegram
 Requires at least: 1.0.0
 Tested up to: 1.0.0
-Stable tag: 2.0.0
+Stable tag: 2.1.1
 License: GPL-2.0+
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
 == Description ==
 
-An enhanced Telegram Bot Notification plugin for PipraPay that delivers real-time transaction alerts directly to your Telegram. This Pro version includes support for multiple chat IDs, granular notification controls, and a modern, user-friendly interface.
-
+An enhanced Telegram Bot Notification plugin for PipraPay that delivers real-time transaction alerts directly to your Telegram.
+This Pro version includes support for multiple chat IDs, granular notification controls, and a modern, user-friendly interface.
 **Key Features:**
 * **Easy Bot Setup**: Connect your Telegram bot by simply pasting the token.
 * **Multiple Chat IDs**: Send notifications to multiple users or channels.
 * **Granular Controls**: Enable or disable notifications for pending, completed, and failed payments.
+* **Interactive Pending Confirmation**: Approve pending transactions directly from Telegram with a confirmation button.
 * **Global Toggle**: Easily enable or disable the entire notification system.
 * **Interactive Bot Commands**: Get real-time sales and transaction data directly from your bot.
 * **User-Friendly Interface**: Modern and intuitive settings page.
@@ -40,6 +41,10 @@ You can use the following commands in your Telegram chat with the bot:
 * `/help` - Show all the available commands.
 
 == Changelog ==
+
+= 2.1.0 =
+* Added interactive "Confirm Transaction" button for pending notifications.
+* Added a setting to enable/disable the confirmation button feature.
 
 = 2.0.0 =
 * Complete overhaul of the plugin

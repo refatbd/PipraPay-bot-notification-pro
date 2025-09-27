@@ -11,10 +11,12 @@ add_action('pp_invoice_ipn', 'telegram_bot_notification_pro_invoice_admin_ipn');
 
 function tgnp_call_telegram_api($bot_token, $method, $params = []) {
     $url = "https://api.telegram.org/bot{$bot_token}/{$method}";
-    if (!empty($params)) {
-        $url .= "?" . http_build_query($params);
-    }
-    $response = @file_get_contents($url);
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($params));
+    $response = curl_exec($ch);
+    curl_close($ch);
     return json_decode($response, true);
 }
 
@@ -135,6 +137,7 @@ if (isset($_POST['telegram-bot-notification-pro-action'])) {
             'notify_pending' => isset($_POST['notify_pending']) ? 'true' : 'false',
             'notify_completed' => isset($_POST['notify_completed']) ? 'true' : 'false',
             'notify_failed' => isset($_POST['notify_failed']) ? 'true' : 'false',
+            'enable_confirm_button' => isset($_POST['enable_confirm_button']) ? 'true' : 'false',
             'chat_ids_json' => json_encode($chat_ids),
             'template_completed' => !empty($_POST['template_completed']) ? $_POST['template_completed'] : $default_templates['completed'],
             'template_pending'   => !empty($_POST['template_pending']) ? $_POST['template_pending'] : $default_templates['pending'],
@@ -150,11 +153,29 @@ if (isset($_POST['telegram-bot-notification-pro-action'])) {
         }
         exit();
     }
+
+    if ($action === 'check_for_updates') {
+        $update_info = tgnp_check_for_github_updates();
+        if ($update_info) {
+            echo json_encode([
+                'status' => true, 
+                'update_available' => true, 
+                'data' => $update_info
+            ]);
+        } else {
+            echo json_encode([
+                'status' => true, 
+                'update_available' => false, 
+                'message' => 'You are using the latest version of the plugin.'
+            ]);
+        }
+        exit();
+    }
 }
 
 // --- Notification Functions ---
 
-function send_telegram_bot_notification_pro($message) {
+function send_telegram_bot_notification_pro($message, $reply_markup = null) {
     $plugin_slug = 'telegram-bot-notification-pro';
     $settings = pp_get_plugin_setting($plugin_slug);
 
@@ -167,11 +188,15 @@ function send_telegram_bot_notification_pro($message) {
 
     foreach ($chat_ids as $chat) {
         if (($chat['enabled'] ?? 'false') === 'true') {
-            tgnp_call_telegram_api($settings['bot_token'], 'sendMessage', [
+            $params = [
                 'chat_id' => $chat['id'],
                 'text' => $message,
                 'parse_mode' => 'Markdown'
-            ]);
+            ];
+            if ($reply_markup) {
+                $params['reply_markup'] = json_encode($reply_markup);
+            }
+            tgnp_call_telegram_api($settings['bot_token'], 'sendMessage', $params);
         }
     }
 }
@@ -219,9 +244,66 @@ function telegram_bot_notification_pro_transaction_admin_ipn($transaction_id) {
 
     $message = tgnp_parse_template($message_template, $placeholders);
     
-    send_telegram_bot_notification_pro($message);
+    $reply_markup = null;
+    if ($status_lower === 'pending' && ($settings['enable_confirm_button'] ?? 'false') === 'true') {
+        $reply_markup = [
+            'inline_keyboard' => [
+                [
+                    ['text' => 'Confirm Pending Transaction', 'callback_data' => 'confirm_pending_' . $transaction_id]
+                ]
+            ]
+        ];
+    }
+    
+    send_telegram_bot_notification_pro($message, $reply_markup);
 }
 
 function telegram_bot_notification_pro_invoice_admin_ipn($invoice_id) {
     // I will develop this in future
+}
+
+// --- Update Checker ---
+
+function tgnp_check_for_github_updates() {
+    $current_version = '2.1.1'; 
+    $github_repo = 'refatbd/PipraPay-bot-notification-pro';
+
+    $api_url = "https://api.github.com/repos/{$github_repo}/releases/latest";
+
+    $ch = curl_init();
+    curl_setopt_array($ch, [
+        CURLOPT_URL => $api_url,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_USERAGENT => 'PipraPay Plugin Update Checker'
+    ]);
+    $response = curl_exec($ch);
+    curl_close($ch);
+
+    if ($response) {
+        $release_data = json_decode($response, true);
+
+        if (isset($release_data['tag_name'])) {
+            $latest_version = ltrim($release_data['tag_name'], 'v');
+
+            if (version_compare($latest_version, $current_version, '>')) {
+                $download_url = '';
+                if (!empty($release_data['assets'])) {
+                    foreach ($release_data['assets'] as $asset) {
+                        if (strpos($asset['name'], '.zip') !== false) {
+                            $download_url = $asset['browser_download_url'];
+                            break;
+                        }
+                    }
+                }
+                
+                return [
+                    'new_version' => $latest_version,
+                    'download_url' => $download_url,
+                    'changelog' => $release_data['body']
+                ];
+            }
+        }
+    }
+
+    return null;
 }

@@ -32,6 +32,16 @@
 <div class="row">
     <div class="col-lg-8">
         <div id="ajaxResponse" class="mb-3"></div>
+
+        <div class="card mb-3">
+            <div class="card-header"><h4 class="card-title">Plugin Updates</h4></div>
+            <div class="card-body">
+                <p class="form-text">Check for new versions of the plugin directly from GitHub.</p>
+                <button id="checkForUpdatesBtn" class="btn btn-secondary">Check for Updates</button>
+                <div id="updateCheckResponse" class="mt-3"></div>
+            </div>
+        </div>
+
         <div class="card mb-3">
             <div class="card-header"><h4 class="card-title">1. Bot Settings</h4></div>
             <div class="card-body">
@@ -75,12 +85,20 @@
                     </div>
 
                     <h5>Receive Notifications For</h5>
-.                    <div class="d-flex gap-4">
+                    <div class="d-flex gap-4">
                         <div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="notify_pending" name="notify_pending" <?php echo ($settings['notify_pending'] ?? 'true') === 'true' ? 'checked' : ''; ?>><label class="form-check-label" for="notify_pending">Pending</label></div>
                         <div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="notify_completed" name="notify_completed" <?php echo ($settings['notify_completed'] ?? 'true') === 'true' ? 'checked' : ''; ?>><label class="form-check-label" for="notify_completed">Completed</label></div>
                         <div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="notify_failed" name="notify_failed" <?php echo ($settings['notify_failed'] ?? 'true') === 'true' ? 'checked' : ''; ?>><label class="form-check-label" for="notify_failed">Failed</label></div>
                     </div>
-
+                    
+                    <hr>
+                    
+                    <h5>Interactive Features</h5>
+                    <div class="form-check form-switch mb-4">
+                        <input class="form-check-input" type="checkbox" id="enable_confirm_button" name="enable_confirm_button" <?php echo ($settings['enable_confirm_button'] ?? 'false') === 'true' ? 'checked' : ''; ?>>
+                        <label class="form-check-label" for="enable_confirm_button"><b>Enable "Confirm Transaction" Button for Pending Notifications</b></label>
+                        <div class="form-text">If enabled, a button will appear on pending transaction notifications, allowing you to confirm them directly from Telegram.</div>
+                    </div>
                     <hr>
 
                     <h5>Recipient Chat IDs</h5>
@@ -105,7 +123,7 @@
             <div class="card mb-3">
                 <div class="card-header"><h4 class="card-title">3. Message Templates</h4></div>
                 <div class="card-body">
-                    <p class="form-text">Customize your notification messages. If a template is left empty, the default will be used. Available placeholders: <code>{amount}</code>, <code>{currency}</code>, <code>{customer_name}</code>, <code>{payment_method}</code>, <code>{sender_number}</code>, <code>{date}</code>, <code>{payment_id}</code>, <code>{gateway_trx_id}</code>, <code>{status}</code></p>
+                    <p class="form-text">Customize your notification messages. Available placeholders: <code>{amount}</code>, <code>{currency}</code>, <code>{customer_name}</code>, <code>{payment_method}</code>, <code>{sender_number}</code>, <code>{date}</code>, <code>{payment_id}</code>, <code>{gateway_trx_id}</code>, <code>{status}</code></p>
                     <div class="mb-3">
                         <label for="template_completed" class="form-label">Completed Transaction</label>
                         <textarea class="form-control" id="template_completed" name="template_completed" rows="5"><?php echo htmlspecialchars($templates['completed']); ?></textarea>
@@ -126,7 +144,7 @@
                 <div class="card-body">
                     <p class="form-text">You can interact with your bot by sending these commands in your Telegram chat.</p>
                     <ul class="list-group">
-                        <li class="list-group-item"><strong>/start</strong> - Get your Chat ID to receive notifications.</li>
+                        <li class="list-group-item"><strong>/start</strong> - Get your Chat ID.</li>
                         <li class="list-group-item"><strong>/last_transaction</strong> - Get details of the most recent transaction.</li>
                         <li class="list-group-item"><strong>/sales_today</strong> - Get the total sales amount for today.</li>
                         <li class="list-group-item"><strong>/sales_yesterday</strong> - Get the total sales amount for yesterday.</li>
@@ -134,7 +152,7 @@
                         <li class="list-group-item"><strong>/pending_transactions</strong> - Get a count of pending transactions.</li>
                         <li class="list-group-item"><strong>/failed_transactions</strong> - Get a count of failed transactions.</li>
                         <li class="list-group-item"><strong>/completed_transactions</strong> - Get a count of completed transactions.</li>
-                        <li class="list-group-item"><strong>/help</strong> - Shows a list of all available commands.</li>
+                        <li class="list-group-item"><strong>/help</strong> - Show all available commands.</li>
                     </ul>
                 </div>
             </div>
@@ -193,7 +211,7 @@ $(document).ready(function() {
 
     $('#addChatId').on('click', function() {
         const index = $('.chat-id-row').length;
-        if(index === 0) $('#chatIdsContainer').html(''); // Clear the "No chat IDs" message
+        if(index === 0) $('#chatIdsContainer').html('');
         const newRow = `
             <div class="row g-2 align-items-center mb-2 chat-id-row">
                 <div class="col"><input type="text" class="form-control" name="chat_ids[${index}][id]" placeholder="Chat ID" required></div>
@@ -206,6 +224,51 @@ $(document).ready(function() {
 
     $('#chatIdsContainer').on('click', '.remove-chat-id', function() {
         $(this).closest('.chat-id-row').remove();
+    });
+
+    // --- Update Checker ---
+    $('#checkForUpdatesBtn').on('click', function() {
+        const button = $(this);
+        const responseContainer = $('#updateCheckResponse');
+        const originalButtonText = button.html();
+        
+        button.html('<span class="spinner-border spinner-border-sm"></span> Checking...').prop('disabled', true);
+        responseContainer.html('');
+
+        $.ajax({
+            url: '',
+            type: 'POST',
+            data: { 'telegram-bot-notification-pro-action': 'check_for_updates' },
+            dataType: 'json',
+            success: function(response) {
+                if (response.status) {
+                    if (response.update_available) {
+                        const update = response.data;
+                        const changelog = update.changelog.replace(/\n/g, '<br>');
+                        const updateHtml = `
+                            <div class="alert alert-info mt-3">
+                                <h4 class="alert-heading">🚀 New Version Available!</h4>
+                                <p>A new version (<strong>${update.new_version}</strong>) is available.</p>
+                                <hr>
+                                <h5>Release Notes:</h5>
+                                <div>${changelog}</div>
+                                <a href="${update.download_url}" class="btn btn-success mt-3" target="_blank">Download Update</a>
+                            </div>`;
+                        responseContainer.html(updateHtml);
+                    } else {
+                        responseContainer.html(`<div class="alert alert-success mt-3">${response.message}</div>`);
+                    }
+                } else {
+                     responseContainer.html(`<div class="alert alert-danger mt-3">Error: ${response.message}</div>`);
+                }
+            },
+            error: function() {
+                responseContainer.html('<div class="alert alert-danger mt-3">An unexpected error occurred.</div>');
+            },
+            complete: function() {
+                button.html(originalButtonText).prop('disabled', false);
+            }
+        });
     });
 });
 </script>
