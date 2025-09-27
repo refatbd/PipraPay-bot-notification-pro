@@ -12,7 +12,7 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
 An enhanced Telegram Bot Notification plugin for PipraPay that delivers real-time transaction alerts directly to your Telegram. This Pro version includes support for multiple chat IDs, granular notification controls, and a modern, user-friendly interface.
 
-== Features ==
+**Key Features:**
 * **Easy Bot Setup**: Connect your Telegram bot by simply pasting the token.
 * **Multiple Chat IDs**: Send notifications to multiple users or channels.
 * **Granular Controls**: Enable or disable notifications for pending, completed, and failed payments.
