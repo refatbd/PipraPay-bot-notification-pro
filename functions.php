@@ -20,6 +20,22 @@ function tgnp_call_telegram_api($bot_token, $method, $params = []) {
     return json_decode($response, true);
 }
 
+function tgnp_set_bot_commands($bot_token) {
+    $commands = [
+        ['command' => '/start', 'description' => 'Get your Chat ID.'],
+        ['command' => '/last_transaction', 'description' => 'Details of the most recent transaction.'],
+        ['command' => '/sales_today', 'description' => 'Total sales for today.'],
+        ['command' => '/sales_yesterday', 'description' => 'Total sales for yesterday.'],
+        ['command' => '/sales_this_month', 'description' => 'Total sales for the current month.'],
+        ['command' => '/pending_transactions', 'description' => 'Count of pending transactions.'],
+        ['command' => '/failed_transactions', 'description' => 'Count of failed transactions.'],
+        ['command' => '/completed_transactions', 'description' => 'Count of completed transactions.'],
+        ['command' => '/help', 'description' => 'Show all available commands.'],
+    ];
+
+    tgnp_call_telegram_api($bot_token, 'setMyCommands', ['commands' => json_encode($commands)]);
+}
+
 function tgnp_save_settings(string $plugin_slug, array $data_to_save) {
     $targetUrl = pp_get_site_url().'/admin/dashboard';
     $data = array_merge(['action' => 'plugin_update-submit', 'plugin_slug' => $plugin_slug], $data_to_save);
@@ -81,6 +97,9 @@ if (isset($_POST['telegram-bot-notification-pro-action'])) {
         if (!($setWebhook['ok'] ?? false)) {
             $webhook_status_message = "Error: " . ($setWebhook['description'] ?? 'Could not set webhook.');
         }
+
+        // Set bot commands
+        tgnp_set_bot_commands($bot_token);
 
         $settings = pp_get_plugin_setting($plugin_slug);
         if (!is_array($settings)) {
