@@ -102,6 +102,12 @@ if (isset($_GET['telegram-bot-notification-pro'])) {
             
             // Use PipraPay's internal function to update the status
             if (pp_set_transaction_status($transaction_id, 'completed')) {
+                
+                // **MODIFIED LINE:** Use the correct hook trigger function that loads all plugins
+                if (function_exists('pp_trigger_hook')) {
+                    pp_trigger_hook('pp_transaction_ipn', $transaction_id);
+                }
+                
                 $new_text = preg_replace("/\n\n\*Are you sure.*\*/", "", $callback_query['message']['text']);
                 $new_text = str_replace("⚪️ *New Transaction: Pending*", "✅ *Transaction Confirmed: Completed*", $new_text);
                 
@@ -250,7 +256,7 @@ if (isset($_GET['telegram-bot-notification-pro'])) {
                              "`/sales_this_month` - Total sales for the current month.\n" .
                              "`/pending_transactions` - Count of pending transactions.\n" .
                              "`/failed_transactions` - Count of failed transactions.\n" .
-                             "`/completed_transactions` - Count of completed transactions.\n" .
+                             "`/completed_transactions` - Count of all completed transactions.\n" .
                              "`/help` - Show all available commands.";
                     break;
 
